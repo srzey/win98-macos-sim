@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>教学模拟 · Windows 98 × macOS（含终端/文件系统/进程）</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:"Segoe UI",Tahoma,"Microsoft YaHei",sans-serif;background:#10131a;color:#e8e8e8;display:flex;flex-direction:column;min-height:100vh;overflow-x:hidden}
+
+/* ===== 顶栏 ===== */
+#topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 18px;background:linear-gradient(180deg,#262b3d,#151827);border-bottom:2px solid #000;flex-wrap:wrap}
+.brand h1{font-size:23px;letter-spacing:3px;color:#fff;text-shadow:0 2px 8px rgba(90,140,255,.5)}
+.brand h1 .sim{color:#7fb0ff}
+.brand .sub{font-size:12px;color:#9aa3b5;margin-top:2px}
+.top-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.userbox{display:flex;align-items:center;gap:6px;font-size:13px;color:#c8d0e0}
+.userbox input{width:130px;padding:5px 8px;border:1px solid #3a4157;border-radius:6px;background:#0d1017;color:#fff;outline:none;font-size:13px}
+.userbox input:focus{border-color:#4f7cff}
+#stBtn{padding:6px 14px;border:1px solid #4f7cff;border-radius:6px;background:linear-gradient(180deg,#3d5bff,#2b43c8);color:#fff;font-size:13px;cursor:pointer}
+#stBtn:hover{filter:brightness(1.12)}
+
+/* ===== 主页（选择系统） ===== */
+#mainpage{position:fixed;inset:0;z-index:500;background:#111a2e;overflow:auto;padding:28px 16px;box-sizing:border-box;font-family:"Segoe UI",Tahoma,"Microsoft YaHei",sans-serif}
+#mainpage .mp-inner{width:100%;max-width:700px;margin:0 auto;text-align:center}
+#mainpage .mp-title{font-size:27px;letter-spacing:3px;color:#fff;margin:0 0 10px;font-weight:700}
+#mainpage .mp-title b{color:#7fb0ff}
+#mainpage .mp-sub{font-size:13px;color:#9aa3b5;line-height:1.75;margin:0 0 24px}
+#mainpage .mp-foot{font-size:12px;color:#7d8598;line-height:1.75;margin:20px auto 0}
+
+/* ===== 舞台 ===== */
+#stage{display:flex;gap:14px;padding:14px;flex:1 1 auto;min-height:0}
+.machine{flex:1 1 0;display:none;flex-direction:column;border-radius:12px;overflow:hidden;border:2px solid #2a2f3d;box-shadow:0 10px 30px rgba(0,0,0,.5);min-width:0;background:#000}
+.machine.show{display:flex}
+.machine-hdr{display:flex;align-items:center;gap:10px;padding:7px 12px;font-weight:700;font-size:15px}
+.machine-hdr .home{margin-left:10px;font-size:12px;font-weight:400;cursor:pointer;padding:3px 10px;border-radius:6px;opacity:.85}
+.machine-hdr .home:hover{opacity:1;background:rgba(255,255,255,.12)}
+.w98-hdr{background:linear-gradient(90deg,#0a246a,#1a55b0);color:#fff;border-bottom:2px solid #000}
+.mac-hdr{background:linear-gradient(180deg,#f2f2f4,#c8c8cc);color:#333;border-bottom:1px solid #999}
+.machine-hdr .badge{margin-left:auto;font-size:11px;font-weight:400;padding:2px 8px;border-radius:999px;opacity:.9}
+.w98-hdr .badge{background:rgba(255,255,255,.18);color:#cfe3ff}
+.mac-hdr .badge{background:rgba(0,0,0,.08);color:#555}
+
+/* ===== 系统状态条 ===== */
+.sysstat{display:flex;align-items:center;gap:14px;padding:5px 12px;font-size:12px;background:rgba(0,0,0,.35);color:#cfe;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,.08)}
+.sysstat b{color:#fff;font-weight:600}
+.sysstat .mode{cursor:pointer;padding:2px 10px;border-radius:6px;border:1px solid #4f7cff;background:rgba(79,124,255,.18)}
+.sysstat .stepbtn{padding:2px 10px;border-radius:6px;border:1px solid #28c840;background:rgba(40,200,64,.18);cursor:pointer}
+.sysstat .stepbtn:hover{filter:brightness(1.15)}
+
+/* ===== 桌面 ===== */
+.desktop{position:relative;flex:1;min-height:540px;overflow:hidden}
+.desk-win{background:#008080}
+.desk-mac{background:linear-gradient(160deg,#0b2a5b 0%,#1b4f9c 34%,#3a7bd5 62%,#9fd8ef 100%)}
+.desk-hint{position:absolute;z-index:5;font-size:11px;opacity:.8;pointer-events:none}
+.desk-hint.h98{left:12px;bottom:46px;color:#eaffea;text-shadow:0 1px 2px #000}
+.desk-hint.hm{right:14px;top:36px;color:#dff1ff;text-shadow:0 1px 2px #000}
+
+/* ===== 图标（优化） ===== */
+.ic98{position:absolute;width:82px;text-align:center;cursor:default;user-select:none;padding:6px 2px;border:1px dotted transparent;border-radius:6px;z-index:6}
+.ic98 .ico{width:50px;height:50px;margin:0 auto;background:linear-gradient(180deg,#f3f3f3,#b9bcc4);border:1px solid #7a7a7a;box-shadow:inset 1px 1px #fff,2px 2px 3px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font-size:26px;border-radius:8px}
+.ic98 .ilbl{color:#fff;font-size:12px;margin-top:4px;text-shadow:1px 1px 2px #000;padding:1px 3px;line-height:1.2}
+.ic98.selected{border:1px dotted #fff;background:rgba(0,0,128,.35)}
+.ic98:hover .ico{filter:brightness(1.08);transform:translateY(-1px)}
+
+/* ===== Win98 开始菜单 / 任务栏 ===== */
+#startMenu{position:absolute;left:2px;bottom:38px;width:220px;background:#c0c0c0;border:1px solid #808080;box-shadow:3px 3px 0 rgba(0,0,0,.45);z-index:80;display:none;padding:3px;font-size:13px}
+#startMenu.show{display:block}
+.sm-hdr{background:linear-gradient(90deg,#000080,#1084d0);color:#fff;padding:6px 8px;font-weight:700;margin-bottom:4px}
+.sm-hdr .sm-title{display:block;font-size:11px;font-weight:400;opacity:.85;margin-top:2px}
+.sm-hdr .user-name{cursor:pointer;text-decoration:underline dotted}
+.sm-item{padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.sm-item:hover{background:#000080;color:#fff}
+.sm-sep{height:1px;background:#808080;border-top:1px solid #fff;margin:3px 0}
+.sm-foot{font-size:10px;color:#444;padding:4px 8px;text-align:center;border-top:1px solid #fff;background:#d4d0c8;margin-top:3px}
+#taskbar98{position:absolute;left:0;right:0;bottom:0;height:34px;background:#c0c0c0;border-top:2px solid #fff;display:flex;align-items:center;gap:4px;padding:2px 4px;z-index:70}
+#startBtn{height:26px;padding:0 10px;font-weight:700;background:#c0c0c0;border:1px solid;border-color:#fff #404040 #404040 #fff;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px}
+#startBtn:active{border-color:#404040 #fff #fff #404040}
+#taskbarBtns{display:flex;gap:4px;flex:1;overflow:hidden}
+.tb-btn{height:26px;padding:0 10px;background:#c0c0c0;border:1px solid;border-color:#fff #404040 #404040 #fff;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:6px;max-width:160px;overflow:hidden;white-space:nowrap}
+.tb-btn:active,.tb-btn:focus{border-color:#808080 #fff #fff #808080}
+.tb-btn.tb-active{background:#e0e0e0;border-color:#808080 #fff #fff #808080;font-weight:700}
+#clockWin{margin-left:auto;height:26px;display:flex;align-items:center;padding:0 8px;border:1px solid;border-color:#808080 #fff #fff #808080;font-size:12px;font-family:Consolas,monospace}
+
+/* ===== macOS 菜单栏 / Dock ===== */
+#menubar{position:absolute;top:0;left:0;right:0;height:26px;z-index:90;background:rgba(24,24,32,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:space-between;padding:0 12px;color:#fff;font-size:13px;border-bottom:1px solid rgba(255,255,255,.12)}
+.mb-left{display:flex;align-items:center;gap:12px}
+.mb-apple{font-size:15px;cursor:default}
+.mb-app{font-weight:700}
+.mb-menu{opacity:.85;cursor:default}
+.mb-menu:hover{opacity:1}
+.mb-right{display:flex;align-items:center;gap:10px}
+#userMac{cursor:pointer;font-weight:600;border-radius:5px;padding:1px 6px}
+#userMac:hover{background:rgba(255,255,255,.18)}
+#dock{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);z-index:90;display:flex;align-items:flex-end;gap:10px;padding:9px 12px;border-radius:18px;background:rgba(255,255,255,.22);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.35);box-shadow:0 6px 24px rgba(0,0,0,.45)}
+.dock-item{position:relative;width:54px;height:54px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#fff,#cfd6e0);border-radius:13px;font-size:26px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.25);transition:transform .15s}
+.dock-item:hover{transform:translateY(-8px) scale(1.12)}
+.dock-item .dock-lbl{position:absolute;bottom:58px;left:50%;transform:translateX(-50%);background:rgba(20,20,25,.85);color:#fff;font-size:11px;padding:3px 8px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s}
+.dock-item:hover .dock-lbl{opacity:1}
+.dock-item.open::after{content:"";position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.85)}
+.dock-sep{width:1px;height:44px;background:rgba(255,255,255,.35);margin:0 2px}
+
+/* ===== 窗口 ===== */
+.win{position:absolute;display:flex;flex-direction:column;min-width:200px;box-shadow:2px 3px 12px rgba(0,0,0,.45);z-index:20}
+.win.sys98{background:#c0c0c0;border:1px solid;border-color:#dfdfdf #404040 #404040 #dfdfdf;padding:2px}
+.win.sys98 .win-title{height:24px;background:linear-gradient(90deg,#808080,#b0b0b0);color:#fff;display:flex;align-items:center;gap:6px;padding:0 4px 0 6px;cursor:move;font-size:13px;font-weight:700;user-select:none}
+.win.sys98 .win-title.active{background:linear-gradient(90deg,#000080,#1084d0)}
+.win.sys98 .win-name{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.win-close{width:20px;height:19px;background:#c0c0c0;border:1px solid;border-color:#fff #404040 #404040 #fff;cursor:pointer;font-size:11px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;color:#000}
+.win-close:active{border-color:#404040 #fff #fff #404040}
+.win.sys98 .win-body{background:#c0c0c0;padding:8px;overflow:auto}
+.win.sysmac{background:#ececec;border-radius:10px;box-shadow:0 14px 44px rgba(0,0,0,.5),0 0 0 1px rgba(0,0,0,.2);overflow:hidden}
+.win.sysmac .win-title{background:linear-gradient(180deg,#f6f6f8,#e2e2e6);display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:move;user-select:none;border-bottom:1px solid #d0d0d4}
+.mac-lights{display:flex;gap:7px;margin-right:6px}
+.lt{width:12px;height:12px;border-radius:50%;border:1px solid rgba(0,0,0,.15)}
+.lt.r{background:#ff5f57;cursor:pointer}.lt.y{background:#febc2e}.lt.g{background:#28c840}
+.lt.r:hover{filter:brightness(.92)}
+.win.sysmac .win-name{flex:1;text-align:center;font-size:13px;font-weight:600;color:#333;margin-right:52px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.win.sysmac .win-body{padding:10px;background:#ececec}
+
+/* ===== 计算器 ===== */
+.calc{padding:2px;width:100%}
+.calc-disp{background:#fff;color:#000;text-align:right;padding:8px 10px;font-size:22px;font-family:Consolas,Menlo,monospace;margin-bottom:8px;overflow:hidden;white-space:nowrap}
+.sys98 .calc-disp{border:1px solid;border-color:#808080 #fff #fff #808080;border-radius:0}
+.sysmac .calc-disp{border:1px solid #c9c9cd;border-radius:8px}
+.calc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.c-btn{height:40px;font-size:16px;cursor:pointer;user-select:none;font-family:inherit}
+.c-zero{grid-column:span 2}
+.sys98 .c-btn{background:#c0c0c0;border:1px solid;border-color:#fff #404040 #404040 #fff;font-weight:700}
+.sys98 .c-btn:active{border-color:#404040 #fff #fff #404040}
+.sysmac .c-btn{background:#fff;border:1px solid #c9c9cd;border-radius:8px;color:#1a1a1a}
+.sysmac .c-btn:active{background:#e6e6ea}
+.sysmac .c-op{background:#f0f0f2;color:#0a5fd0}
+.sysmac .c-eq{background:#0a84ff;color:#fff;border:none}
+
+/* ===== 图画 ===== */
+.paint{width:100%}
+.paint-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.palette{display:flex;gap:4px}
+.sw{width:22px;height:22px;border:1px solid #888;cursor:pointer;padding:0;border-radius:3px}
+.sw.on{outline:2px solid #0a84ff;outline-offset:1px}
+.sz{height:24px;font-size:12px}
+.act{height:24px;padding:0 10px;font-size:12px;cursor:pointer}
+.sys98 .act{background:#c0c0c0;border:1px solid;border-color:#fff #404040 #404040 #fff}
+.sys98 .act:active{border-color:#404040 #fff #fff #404040}
+.sysmac .act{background:#fff;border:1px solid #c9c9cd;border-radius:7px}
+.paint .cv{width:100%;background:#fff;border:1px solid #999;cursor:crosshair;touch-action:none;display:block;border-radius:2px}
+.sys98 .paint .cv{border-color:#808080 #fff #fff #808080}
+
+/* ===== 井字棋 ===== */
+.ttt{width:100%;text-align:center}
+.ttt-status{font-size:15px;font-weight:700;margin-bottom:8px;padding:5px;border-radius:6px;background:rgba(0,0,0,.06);color:#444}
+.ttt-status.tx{color:#c02424}.ttt-status.to{color:#0a5fd0}.ttt-status.tdraw{color:#888}
+.ttt-board{display:grid;grid-template-columns:repeat(3,64px);gap:5px;justify-content:center;margin:8px auto 12px}
+.cell{width:64px;height:64px;font-size:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none;line-height:1}
+.sys98 .cell{background:#c0c0c0;border:1px solid;border-color:#fff #404040 #404040 #fff;font-weight:700}
+.sys98 .cell:active{border-color:#404040 #fff #fff #404040}
+.sysmac .cell{background:#fff;border:1px solid #c9c9cd;border-radius:10px}
+.cell.px{color:#c02424}.cell.po{color:#0a5fd0}
+.cell.win-cell{background:#ffe08a;outline:2px solid #ffb020;outline-offset:-1px}
+.ttt-restart{padding:7px 18px;font-size:13px;cursor:pointer;font-weight:700}
+.sys98 .ttt-restart{background:#c0c0c0;border:1px solid;border-color:#fff #404040 #404040 #fff}
+.sys98 .ttt-restart:active{border-color:#404040 #fff #fff #404040}
+.sysmac .ttt-restart{background:#0a84ff;color:#fff;border:none;border-radius:8px}
+
+/* ===== 终端 ===== */
+.term{width:100%;height:300px;display:flex;flex-direction:column;font-family:Consolas,Menlo,monospace;font-size:13px}
+.term-out{flex:1;overflow:auto;background:#0b0e14;color:#d6e2c8;padding:8px;white-space:pre-wrap;word-break:break-word;border:1px solid #333}
+.term-out .err{color:#ff9a9a}.term-out .ok{color:#9affb0}.term-out .sys{color:#8fd0ff}
+.term-in{display:flex;align-items:center;gap:6px;background:#0b0e14;border:1px solid #333;border-top:none;padding:6px 8px}
+.term-in .ps1{color:#7fd0ff;white-space:nowrap;font-size:12px}
+.term-in input{flex:1;background:#0b0e14;border:none;color:#d6e2c8;outline:none;font-family:inherit;font-size:13px}
+
+/* ===== 文件浏览器 ===== */
+.fb{width:100%;font-size:13px}
+.fb-bar{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.fb-addr{flex:1;padding:5px 8px;border:1px solid #888;border-radius:5px;background:#fff;color:#000;font-family:Consolas,monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fb-btn{height:26px;padding:0 10px;cursor:pointer;font-size:12px}
+.sys98 .fb-btn{background:#c0c0c0;border:1px solid;border-color:#fff #404040 #404040 #fff}
+.sysmac .fb-btn{background:#fff;border:1px solid #c9c9cd;border-radius:7px}
+.fb-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;max-height:170px;overflow:auto;padding:4px;background:rgba(0,0,0,.04);border:1px solid #aaa;border-radius:6px}
+.fb-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;border:1px solid transparent;border-radius:6px;cursor:pointer;font-size:11px;text-align:center}
+.fb-item:hover{background:rgba(80,120,255,.12);border-color:#7fb0ff}
+.fb-item .fi{font-size:26px}
+.fb-item.dir .fi{color:#e0a030}
+.fb-view{margin-top:8px;background:#0b0e14;color:#d6e2c8;padding:8px;border-radius:6px;min-height:60px;max-height:120px;overflow:auto;white-space:pre-wrap;font-family:Consolas,monospace;font-size:12px}
+
+/* ===== PCB / 进程窗口 ===== */
+.pcb{width:100%;font-size:12px}
+.pcb-toolbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.pcb-toolbar select,.pcb-toolbar input{padding:4px 6px;border:1px solid #888;border-radius:5px;font-size:12px}
+.pcb-toolbar button{height:26px;padding:0 10px;cursor:pointer;font-size:12px}
+.sys98 .pcb-toolbar button{background:#c0c0c0;border:1px solid;border-color:#fff #404040 #404040 #fff}
+.sysmac .pcb-toolbar button{background:#fff;border:1px solid #c9c9cd;border-radius:7px}
+.pcb-table{width:100%;border-collapse:collapse;font-family:Consolas,Menlo,monospace;font-size:11px}
+.pcb-table th,.pcb-table td{border:1px solid #999;padding:3px 5px;text-align:left}
+.pcb-table th{background:rgba(0,0,0,.12)}
+.pcb-table tr.Running{background:rgba(40,200,64,.18)}
+.pcb-table tr.Blocked{background:rgba(255,180,40,.16)}
+.pcb-table tr.Finished{color:#888}
+.pcb-detail{margin-top:8px;background:rgba(0,0,0,.05);border:1px solid #999;border-radius:6px;padding:8px;font-family:Consolas,monospace;font-size:11px;white-space:pre-wrap;max-height:150px;overflow:auto}
+.pcb-export{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap}
+.pcb-export button{height:26px;padding:0 10px;cursor:pointer;font-size:12px}
+.sys98 .pcb-export button{background:#c0c0c0;border:1px solid;border-color:#fff #404040 #404040 #fff}
+.sysmac .pcb-export button{background:#fff;border:1px solid #c9c9cd;border-radius:7px}
+
+/* ===== 信息类 / 自检 / 页脚 ===== */
+.info-win{font-size:13px;line-height:1.65;color:#1a1a1a}
+.info-win h3{margin-bottom:8px;font-size:14px}
+.info-win p{margin:4px 0}
+.check li{margin:6px 0 6px 18px}
+.hint{margin-top:8px;color:#0a5fd0}
+#stBox{position:fixed;top:64px;right:18px;z-index:9999;background:#fdfdfd;color:#222;border-radius:10px;box-shadow:0 14px 40px rgba(0,0,0,.55);padding:12px 16px;min-width:260px;display:none;font-size:13px;border:1px solid #d0d0d0}
+#stBox.show{display:block}
+.st-h{font-weight:700;margin-bottom:8px;border-bottom:1px solid #ddd;padding-bottom:6px}
+.st-item{padding:3px 0}
+.st-item.ok{color:#0a7d2a}.st-item.bad{color:#c00}
+footer#foot{padding:7px 18px;font-size:12px;color:#8a93a8;background:#1a1e2a;border-top:1px solid #000;text-align:center}
+@media(max-width:1080px){#stage{flex-direction:column}.machine{min-height:560px}#topbar{justify-content:center}}
+</style>
+</head>
+<body>
+<header id="topbar">
+  <div class="brand">
+    <h1>教学模拟 <span class="sim">· Win98 × macOS</span></h1>
+    <div class="sub">单文件离线模拟 · 含终端 / 虚拟文件系统 / 进程与 PCB · 双击即可运行 · 无需联网</div>
+  </div>
+  <div class="top-actions">
+    <div class="userbox"><label for="userNameInput">用户名</label><input id="userNameInput" value="张恩义"></div>
+    <button id="stBtn">🧪 自检核心功能</button>
+  </div>
+</header>
+
+<main id="stage">
+  <section id="mainpage" style="position:fixed;inset:0;z-index:500;background:#111a2e;overflow:auto;padding:24px 18px 18px;box-sizing:border-box">
+  <div style="max-width:1120px;margin:0 auto;text-align:center">
+    <div style="font-size:24px;font-weight:700;color:#fff;letter-spacing:3px;margin:0 0 6px">请选择要进入的 <span style="color:#7fb0ff">模拟系统</span></div>
+    <div style="font-size:12px;color:#9aa3b5;line-height:1.65;margin:0 0 18px">两套系统独立运行 · 文件与进程仅存内存 · 刷新页面即重置</div>
+
+    <div style="display:flex;flex-direction:row;flex-wrap:nowrap;align-items:stretch;justify-content:space-between;gap:28px;width:100%;margin:0 auto 6px">
+
+      <div style="flex:1 1 0;display:flex;justify-content:center;align-items:center">
+        <div class="mp-card win" data-sys="win" style="display:flex;flex-direction:column;align-items:center;justify-content:flex-start;width:290px;flex:0 0 290px;padding:26px 20px;border-radius:20px;box-sizing:border-box;cursor:pointer;text-align:center;border:2px solid transparent;background:#0a246a;color:#fff;border-color:#4b8bf5">
+          <div style="height:124px;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 48 48" width="112" height="112"><rect x="3" y="3" width="19" height="19" rx="2" fill="#e81123"/><rect x="26" y="3" width="19" height="19" rx="2" fill="#0078d4"/><rect x="3" y="26" width="19" height="19" rx="2" fill="#09bb07"/><rect x="26" y="26" width="19" height="19" rx="2" fill="#f79f1a"/></svg></div>
+          <div style="font-size:20px;font-weight:700;line-height:1.3;margin-top:10px">Windows 98</div>
+          <div style="font-size:12px;opacity:.86;line-height:1.6;margin-top:6px">青绿桌面 · 灰色窗口<br>开始菜单 · 任务栏</div>
+          <div style="margin-top:14px;padding:7px 18px;border-radius:12px;background:#0a84ff;color:#fff;font-size:13px;font-weight:700">进入 Windows ▶</div>
+        </div>
+      </div>
+
+      <div style="width:1px;align-self:stretch;background:rgba(255,255,255,.10)"></div>
+
+      <div style="flex:1 1 0;display:flex;justify-content:center;align-items:center">
+        <div class="mp-card mac" data-sys="mac" style="display:flex;flex-direction:column;align-items:center;justify-content:flex-start;width:290px;flex:0 0 290px;padding:26px 20px;border-radius:20px;box-sizing:border-box;cursor:pointer;text-align:center;border:2px solid transparent;background:#f2f2f7;color:#1c1c1e;border-color:#ffffff">
+          <div style="height:124px;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 96 112" width="100" height="117"><rect x="4" y="6" width="88" height="100" rx="24" fill="#2b2b30" stroke="#5a5a62" stroke-width="2"/><path d="M69 56.4c0-8.4 6.8-12.4 7.2-12.6-4-5.8-10.2-6.6-12.4-6.8-5.2-0.6-10.4 3-13 3-2.6 0-6.8-3-11-2.8-5.6 0.2-10.8 3.2-13.8 8.2-6 10.2-1.6 25.4 4.2 33.8 2.8 4 6 8.6 10.4 8.4 4.2-0.2 5.8-2.6 10.8-2.6 5 0 6.4 2.6 10.8 2.6 4.4 0 7.2-4 10-8 3.2-4.6 4.4-9 4.6-9.2-0.2 0-8.6-3.2-8.8-12.8z M58.6 26.8c2.2-2.8 3.8-6.6 3.4-10.4-3.2 0.2-7.2 2.2-9.6 5-2 2.4-3.8 6.4-3.4 10.2 3.6 0.2 7.2-1.8 9.6-4.8z" fill="#ffffff"/></svg></div>
+          <div style="font-size:20px;font-weight:700;line-height:1.3;margin-top:10px">macOS</div>
+          <div style="font-size:12px;opacity:.8;line-height:1.6;margin-top:6px">顶部菜单栏 · 底部 Dock<br>独立进程表</div>
+          <div style="margin-top:14px;padding:7px 18px;border-radius:12px;background:#0a84ff;color:#fff;font-size:13px;font-weight:700">进入 macOS ▶</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="font-size:10.5px;color:#6f7789;line-height:1.7;margin:10px auto 0;max-width:560px">本页为教学模拟：终端命令与进程/PCB 均为教学模型，不宣称 Windows 98 原生自带，也不读取真实硬盘或真实 PCB。</div>
+  </div>
+</section>
+  <!-- 机器由 JS 注入 -->
+</main>
+
+<div id="stBox"></div>
+<footer id="foot">本文件为单文件离线应用：双击即可运行；保存只需把本 HTML 复制/另存到任意位置（无需联网）。所有运行态数据（文件/进程/日志）存于内存，刷新即丢失，请用“实验记录导出”或“保存带姓名 HTML”留存。</footer>
+
+<script>
+(function(){
+"use strict";
+
+/* ============ 虚拟文件系统 ============ */
+function dir(name){ return {type:'dir', name:name, children:{}}; }
+function file(name, content){ return {type:'file', name:name, content: content||''}; }
+function homePath(kind,user){ return '/home/'+user; }
+function makeFS(kind,user){
+  var root=dir('');
+  var home=dir('home'); root.children['home']=home;
+  var uh=dir(user); home.children[user]=uh;
+  uh.children['Desktop']=dir('Desktop');
+  uh.children['Documents']=dir('Documents');
+  uh.children['readme.txt']=file('readme.txt', defaultReadme(user,kind));
+  return root;
+}
+function defaultReadme(user,kind){
+  return [
+    '教学模拟系统 readme.txt',
+    '用户: '+user,
+    '系统: '+(kind==='win'?'Windows 98':'macOS')+'（模拟）',
+    '',
+    '说明：本文件位于你的虚拟主目录，由终端与文件浏览器共享读写。',
+    '所有数据仅存于内存，刷新页面即丢失；请用“实验记录导出”留存。'
+  ].join('\n');
+}
+function normalize(p){
+  var abs=p[0]==='/';
+  var parts=p.split('/'); var stack=[];
+  for(var i=0;i<parts.length;i++){ var s=parts[i];
+    if(s===''||s==='.') continue;
+    if(s==='..'){ if(stack.length) stack.pop(); continue; }
+    stack.push(s);
+  }
+  return (abs?'/':'')+stack.join('/');
+}
+function resolve(sys,arg){
+  var home='/home/'+sys.user;
+  if(arg==null||arg==='') return sys.cwd;
+  if(arg==='~') return home;
+  if(arg[0]==='~') return normalize(home+arg.slice(1));
+  if(arg[0]==='/') return normalize(arg);
+  return normalize(sys.cwd+'/'+arg);
+}
+function getNode(root,absPath){
+  var segs=absPath.split('/').filter(Boolean);
+  var cur=root;
+  for(var i=0;i<segs.length;i++){
+    if(cur.children && cur.children[segs[i]]) cur=cur.children[segs[i]];
+    else return null;
+  }
+  return cur;
+}
+function dirname(p){ var i=p.lastIndexOf('/'); return i<=0?'/':p.slice(0,i); }
+function basename(p){ var i=p.lastIndexOf('/'); return p.slice(i+1); }
+function displayCwd(sys){
+  var home='/home/'+sys.user;
+  var rest = sys.cwd===home ? '' : sys.cwd.slice(home.length);
+  if(sys.kind==='win') return 'C:\\Users\\'+sys.user + rest.replace(/\//g,'\\');
+  return '/Users/'+sys.user + rest;
+}
+function tokenize(line){
+  var tokens=[], i=0, n=line.length, cur='', q=null;
+  while(i<n){
+    var ch=line[i];
+    if(q){ if(ch===q){ q=null; } else cur+=ch; i++; continue; }
+    if(ch==='"'||ch==="'"){ q=ch; i++; continue; }
+    if(ch==='>'){ if(cur!==''){tokens.push(cur);cur='';} tokens.push('>'); i++; continue; }
+    if(ch===' '||ch==='\t'){ if(cur!==''){tokens.push(cur);cur='';} i++; continue; }
+    cur+=ch; i++;
+  }
+  if(cur!=='') tokens.push(cur);
+  return tokens;
+}
+
+/* ============ 进程与系统内核 ============ */
+var BASE_MEM={calc:512,paint:2048,ttt:768,terminal:1024,files:1024,pcb:512,mycomp:256,readme:256};
+function System(kind,user){
+  this.kind=kind; this.user=user;
+  this.tickMs=100; this.mode='realtime';
+  this.cpuLog=[]; this.totalCpuMs=0; this.bufferedMem=0;
+  this.nextPid=100; this.processes=[]; this.archived=[];
+  this.cwd=homePath(kind,user); this.fs=makeFS(kind,user);
+  this.runningPid=null; this.listeners=[]; this.timer=null;
+  this.log=[]; // 实验记录
+}
+System.prototype.addListener=function(fn){ this.listeners.push(fn); };
+System.prototype.notify=function(){ var b=this.bufferedMem; this.bufferedMem=0; for(var i=0;i<this.processes.length;i++) this.bufferedMem+=this.processes[i].fileBuf||0; for(var j=0;j<this.listeners.length;j++){ try{this.listeners[j](this);}catch(e){} } };
+System.prototype.logEvent=function(kind,text){ this.log.push({t:Date.now(),kind:kind,text:text}); };
+System.prototype.spawn=function(name,ppid,app){
+  var p={ pid:this.nextPid++, ppid: ppid||1, user:this.user, name:name, app:app,
+    state:'Ready', prio:3, cpuMs:0, mem:BASE_MEM[app]||512, pc:0, r0:0, r1:0,
+    cwd:this.cwd, startedAt:Date.now(), pendingMs:0, fileBuf:0, act:{} };
+  this.processes.push(p);
+  this.logEvent('spawn','PID '+p.pid+' '+name+' 创建 (PPID '+(ppid||1)+', 应用 '+app+')');
+  this.notify();
+  return p;
+};
+System.prototype.findProc=function(pid){ pid=Number(pid);
+  for(var i=0;i<this.processes.length;i++) if(this.processes[i].pid===pid) return this.processes[i];
+  for(var j=0;j<this.archived.length;j++) if(this.archived[j].pid===pid) return this.archived[j];
+  return null; };
+System.prototype.finish=function(pid){
+  var p=this.findProc(pid); if(!p) return false;
+  p.state='Finished'; p.finishedAt=Date.now();
+  this.archived.push(p);
+  this.processes=this.processes.filter(function(x){return x.pid!==pid;});
+  this.logEvent('finish','PID '+pid+' '+p.name+' 终止并归档');
+  this.notify(); return true;
+};
+System.prototype.bumpRegs=function(p){
+  if(p.app==='calc'){ p.r1 = (p.act.value!=null?p.act.value:0); }
+  else if(p.app==='paint'){ p.r1 = (p.act.strokes||0); }
+  else if(p.app==='ttt'){ p.r1 = (p.act.moves||0); }
+  else if(p.app==='terminal'){ p.r1 = (p.act.cmds||0); }
+  else if(p.app==='files'){ p.r1 = (p.act.nav||0); }
+  else { p.r1 = p.r0; }
+  p.r0 += 1;
+};
+System.prototype.realtimeTick=function(){
+  if(this.mode!=='realtime') return;
+  var budget=100, now=Date.now(), consumed=0, self=this;
+  this.processes.forEach(function(p){
+    if(p.pendingMs>0 && budget>0){
+      var serv=Math.min(p.pendingMs,budget);
+      p.pendingMs-=serv; budget-=serv; consumed+=serv;
+      p.cpuMs+=serv; self.totalCpuMs+=serv;
+      p.pc+=Math.round(serv/10); self.bumpRegs(p);
+    }
+  });
+  if(consumed>0) this.cpuLog.push({t:now,ms:consumed});
+  while(this.cpuLog.length && now-this.cpuLog[0].t>1000) this.cpuLog.shift();
+  this.notify();
+};
+System.prototype.startRealtime=function(){ var self=this; this.stopTimer(); this.timer=setInterval(function(){self.realtimeTick();},100); };
+System.prototype.stopTimer=function(){ if(this.timer){clearInterval(this.timer);this.timer=null;} };
+System.prototype.cpuPercent=function(){ var sum=0; for(var i=0;i<this.cpuLog.length;i++) sum+=this.cpuLog[i].ms; return Math.min(100,Math.round(sum/10)); };
+System.prototype.step=function(){
+  if(this.mode!=='step') return {err:'当前为实时模式，请先切换到单步模式'};
+  var ready=this.processes.filter(function(p){return p.state==='Ready';});
+  if(!ready.length) return {info:'无可运行就绪进程'};
+  var idx=0;
+  if(this.runningPid!=null){
+    var ci=-1; for(var k=0;k<ready.length;k++) if(ready[k].pid===this.runningPid) ci=k;
+    idx=(ci+1)%ready.length; if(ci<0) idx=0;
+  }
+  this.processes.forEach(function(p){ if(p.state==='Running') p.state='Ready'; });
+  var p=ready[idx];
+  p.state='Running'; this.runningPid=p.pid;
+  p.pc+=1; p.cpuMs+=100; this.bumpRegs(p);
+  this.logEvent('step','step -> PID '+p.pid+' '+p.name+' PC='+p.pc+' CPU='+p.cpuMs+'ms');
+  this.notify();
+  return {pid:p.pid,name:p.name};
+};
+System.prototype.block=function(pid){ var p=this.findProc(pid); if(!p) return false; if(p.state!=='Running') return false; p.state='Blocked'; if(this.runningPid===p.pid) this.runningPid=null; this.logEvent('block','PID '+pid+' -> Blocked'); this.notify(); return true; };
+System.prototype.wake=function(pid){ var p=this.findProc(pid); if(!p) return false; if(p.state!=='Blocked') return false; p.state='Ready'; this.logEvent('wake','PID '+pid+' -> Ready'); this.notify(); return true; };
+System.prototype.kill=function(pid){ var ok=this.finish(pid); if(ok){ this.logEvent('kill','kill PID '+pid); this.notify(); } return ok; };
+System.prototype.setMode=function(m){ this.mode=m; if(m==='realtime') this.startRealtime(); else this.stopTimer(); this.logEvent('mode','模式切换 -> '+m); this.notify(); };
+
+/* ============ 终端命令执行 ============ */
+function readFileNode(sys,path){ var node=getNode(sys.fs,path); if(!node) return {err:'系统找不到指定的路径: '+path}; if(node.type!=='file') return {err:'不是文件: '+path}; return {content:node.content}; }
+function writeFileNode(sys,path,content){ var dp=dirname(path); var parent=getNode(sys.fs,dp); if(!parent||parent.type!=='dir') return {err:'目录不存在: '+dp}; var name=basename(path); var node=parent.children[name]; if(node&&node.type==='dir') return {err:'已是目录: '+name}; if(!node){ node=file(name,''); parent.children[name]=node; } node.content=content; node.mtime=Date.now(); return {ok:true}; }
+
+function execCommand(sys,line,termProc){
+  line=line.replace(/\s+$/,''); 
+  var lines=[]; var out=function(s,cls){ lines.push({t:s,cls:cls||''}); };
+  var tokens=tokenize(line);
+  if(!tokens.length) return {lines:lines};
+  var cmd=tokens[0].toLowerCase();
+  if(cmd==='clear'||cmd==='cls'){ return {lines:lines,clear:true}; }
+  if(cmd==='exit'){ out('正在关闭终端…','sys'); return {lines:lines,exit:true}; }
+  if(cmd==='help'){ HELP.forEach(function(h){ out(h,'sys'); }); sys.logEvent('cmd',line+' -> 帮助'); return {lines:lines}; }
+  if(cmd==='whoami'){ out(sys.user); sys.logEvent('cmd',line+' -> '+sys.user); return {lines:lines}; }
+  if(cmd==='date'){ var d=new Date(); out(d.toLocaleDateString('zh-CN')+' '+d.toLocaleTimeString('zh-CN')); sys.logEvent('cmd',line+' -> date'); return {lines:lines}; }
+  if(cmd==='time'){ var t=new Date(); out(t.toLocaleTimeString('zh-CN')); sys.logEvent('cmd',line+' -> time'); return {lines:lines}; }
+  if(cmd==='pwd'){ out(displayCwd(sys)); sys.logEvent('cmd',line+' -> '+sys.cwd); return {lines:lines}; }
+  if(cmd==='cd'){ var arg=tokens.length>1?tokens[1]:'~'; var np=resolve(sys,arg); var node=getNode(sys.fs,np); if(!node||node.type!=='dir'){ out('cd: 不是目录: '+arg,'err'); return {lines:lines}; } sys.cwd=normalize(np); out('',''); sys.logEvent('cmd',line+' -> '+sys.cwd); return {lines:lines}; }
+  if(cmd==='ls'||cmd==='dir'){ var a=tokens.length>1?tokens[1]:'.'; var p=resolve(sys,a); var nd=getNode(sys.fs,p); if(!nd){ out(cmd+': 找不到路径: '+a,'err'); return {lines:lines}; } if(nd.type!=='dir'){ out(nd.name,'ok'); return {lines:lines}; } var names=Object.keys(nd.children).sort(); if(!names.length) out('(空目录)'); else names.forEach(function(nm){ var c=nd.children[nm]; out((c.type==='dir'?nm+'/':nm), c.type==='dir'?'sys':'ok'); }); sys.logEvent('cmd',line+' -> '+names.length+' 项'); return {lines:lines}; }
+  if(cmd==='mkdir'){ if(tokens.length<2){ out('用法: mkdir <目录名>','err'); return {lines:lines}; } var tp=resolve(sys,tokens[1]); var dp=dirname(tp); var par=getNode(sys.fs,dp); if(!par||par.type!=='dir'){ out('mkdir: 父目录不存在','err'); return {lines:lines}; } var nm=basename(tp); if(par.children[nm]){ out('mkdir: 已存在','err'); return {lines:lines}; } par.children[nm]=dir(nm); sys.logEvent('cmd',line); out('已创建目录 '+nm,'ok'); return {lines:lines}; }
+  if(cmd==='echo'){ var gi=tokens.indexOf('>'); if(gi<0){ out(tokens.slice(1).join(' ')); sys.logEvent('cmd',line); return {lines:lines}; } var content=tokens.slice(1,gi).join(' '); var fpath=resolve(sys, tokens[gi+1]); var r=writeFileNode(sys,fpath,content); if(r.err){ out('echo: '+r.err,'err'); return {lines:lines}; } out('已写入 '+basename(fpath),'ok'); sys.logEvent('cmd',line); return {lines:lines}; }
+  if(cmd==='cat'||cmd==='type'){ if(tokens.length<2){ out('用法: '+cmd+' <文件>','err'); return {lines:lines}; } var fp=resolve(sys,tokens[1]); var r=readFileNode(sys,fp); if(r.err){ out(cmd+': '+r.err,'err'); return {lines:lines}; } out(r.content||'(空文件)'); if(termProc){ termProc.fileBuf += Math.max(1,Math.round((r.content.length)/1024)); } sys.notify(); sys.logEvent('cmd',line+' -> '+r.content.length+'B'); return {lines:lines}; }
+  if(cmd==='ps'){ lines.push({t:'PID  PPID  USER    STATE     PRIO  CPU(ms)  MEM(KB)  PC   NAME',cls:'sys'}); sys.processes.forEach(function(p){ lines.push({t:fmtProc(p),cls:''}); }); sys.archived.slice(-5).forEach(function(p){ lines.push({t:fmtProc(p),cls:'sys'}); }); sys.logEvent('cmd',line); return {lines:lines}; }
+  if(cmd==='pcb'){ if(tokens.length<2){ out('用法: pcb <PID>','err'); return {lines:lines}; } var pp=sys.findProc(tokens[1]); if(!pp){ out('pcb: 找不到 PID '+tokens[1],'err'); return {lines:lines}; } out(pcbDetail(sys,pp),'sys'); return {lines:lines}; }
+  if(cmd==='step'){ var r=sys.step(); if(r.err) out('step: '+r.err,'err'); else if(r.info) out(r.info); else out('step 派发 PID '+r.pid+' '+r.name,'ok'); sys.logEvent('cmd',line); return {lines:lines}; }
+  if(cmd==='block'){ if(tokens.length<2){ out('用法: block <PID>','err'); return {lines:lines}; } out(sys.block(tokens[1])?'block PID '+tokens[1]+' 成功':'block 失败（非 Running 或不存在）','ok'); sys.logEvent('cmd',line); return {lines:lines}; }
+  if(cmd==='wake'){ if(tokens.length<2){ out('用法: wake <PID>','err'); return {lines:lines}; } out(sys.wake(tokens[1])?'wake PID '+tokens[1]+' 成功':'wake 失败（非 Blocked 或不存在）','ok'); sys.logEvent('cmd',line); return {lines:lines}; }
+  if(cmd==='kill'){ if(tokens.length<2){ out('用法: kill <PID>','err'); return {lines:lines}; } out(sys.kill(tokens[1])?'kill PID '+tokens[1]+' 成功':'kill 失败（不存在）','ok'); sys.logEvent('cmd',line); return {lines:lines}; }
+  out(cmd+': 未知命令（输入 help 查看）','err'); sys.logEvent('cmd',line+' -> 未知'); return {lines:lines};
+}
+function fmtProc(p){ return pad(String(p.pid),4)+' '+pad(String(p.ppid),4)+'  '+pad(p.user,7)+' '+pad(p.state,9)+' '+pad(String(p.prio),4)+' '+pad(String(p.cpuMs),8)+' '+pad(String(p.mem),8)+' '+pad(String(p.pc),4)+'  '+p.name; }
+function pad(s,n){ s=String(s); while(s.length<n) s+=' '; return s; }
+function pcbDetail(sys,p){ var s=[]; s.push('PID       : '+p.pid); s.push('PPID      : '+p.ppid); s.push('USER      : '+p.user); s.push('NAME      : '+p.name); s.push('APP       : '+p.app); s.push('STATE     : '+p.state); s.push('PRIORITY  : '+p.prio); s.push('CPU 累计  : '+p.cpuMs+' ms'); s.push('内存      : '+p.mem+' KB'); s.push('PC        : '+p.pc); s.push('R0        : '+p.r0); s.push('R1        : '+p.r1); s.push('CWD       : '+displayCwd(Object.assign({},sys,{cwd:p.cwd}))); return s.join('\n'); }
+/* ============ 计算器 / 井字棋 纯逻辑 ============ */
+function initCalcState(){ return {disp:'0',cur:'',prev:null,op:null,err:false}; }
+function fmtNum(n){ if(typeof n!=='number'||isNaN(n)) return '错误'; if(n===0) return '0'; var r=Math.round(n*1e10)/1e10; var s=String(r); if(/e/i.test(s)) s=n.toFixed(10).replace(/0+$/,'').replace(/\.$/,''); if(s==='-0') s='0'; return s; }
+function applyOp(a,b,op){ a=Number(a);b=Number(b); if(op==='+')return a+b; if(op==='-')return a-b; if(op==='*')return a*b; if(op==='/'){ if(b===0)return null; return a/b; } return null; }
+function calcReduce(s,k){
+  if(s.err){ if(k==='C') return initCalcState(); return Object.assign({},s); }
+  if(k==='C') return initCalcState();
+  if(k==='B'){ var cur=s.cur.slice(0,-1); return Object.assign({},s,{cur:cur,disp:cur===''?'0':cur}); }
+  if(k==='.'){ if(s.cur==='') return Object.assign({},s,{cur:'0.',disp:'0.'}); if(s.cur.includes('.')) return Object.assign({},s); return Object.assign({},s,{cur:s.cur+'.',disp:s.cur+'.'}); }
+  if(/^\d$/.test(k)){ var c=(s.cur===''||s.cur==='0')?k:s.cur+k; return Object.assign({},s,{cur:c,disp:c}); }
+  if(['+','-','*','/'].includes(k)){ var prev=s.prev,cur=s.cur; if(s.op!==null&&cur!==''){ var r=applyOp(prev,cur,s.op); if(r===null) return Object.assign({},s,{err:true,disp:'不能除以零!'}); prev=r; } else if(s.op===null){ prev=cur===''?(prev!==null?prev:0):Number(cur); } return Object.assign({},s,{prev:prev,cur:'',op:k,disp:fmtNum(prev)}); }
+  if(k==='='){ if(s.op===null) return Object.assign({},s); var cur2=s.cur===''?String(s.prev):s.cur; var r2=applyOp(s.prev,cur2,s.op); if(r2===null) return Object.assign({},s,{err:true,disp:'不能除以零!'}); return Object.assign({},s,{prev:r2,cur:'',op:null,disp:fmtNum(r2)}); }
+  return Object.assign({},s);
+}
+function getWin(bd){ var L=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]; for(var i=0;i<L.length;i++){ if(bd[L[i][0]]&&bd[L[i][0]]===bd[L[i][1]]&&bd[L[i][1]]===bd[L[i][2]]) return L[i]; } return null; }
+
+var HELP=[
+ '教学模拟终端 — 基础命令（全部为虚拟实现，不访问真实硬盘）:',
+ '  help            显示本帮助',
+ '  whoami          显示当前用户',
+ '  date / time     显示日期 / 时间（取浏览器时钟）',
+ '  pwd             显示当前目录',
+ '  cd [路径]       切换目录（ls/dir 只列目录，cd 才切换）',
+ '  ls / dir [路径] 列出目录内容',
+ '  mkdir <名>      创建目录',
+ '  echo 文本 > 文件 写文件（支持引号，如 echo "你好" > a.txt）',
+ '  cat / type <文件> 查看文件内容',
+ '  clear / cls     清屏',
+ '  exit            关闭终端',
+ '教学/进程命令:',
+ '  ps              进程列表',
+ '  pcb <PID>       查看某进程 PCB 详情',
+ '  step            单步调度（单步模式下生效）',
+ '  block <PID>     将 Running 置为 Blocked',
+ '  wake  <PID>     将 Blocked 置为 Ready',
+ '  kill  <PID>     结束进程并归档',
+ '说明：这些命令与进程/PCB 均为教学模型，不宣称 Windows 98 原生自带，也不读取真实完整 PCB。'
+];
+
+/* ============ 应用内容模板 ============ */
+function calcHTML(){ return `<div class="calc"><div class="calc-disp">0</div><div class="calc-grid">
+  <button class="c-btn c-fn" data-k="C">C</button><button class="c-btn c-fn" data-k="B">⌫</button><button class="c-btn c-op" data-k="/">÷</button><button class="c-btn c-op" data-k="*">×</button>
+  <button class="c-btn c-num" data-k="7">7</button><button class="c-btn c-num" data-k="8">8</button><button class="c-btn c-num" data-k="9">9</button><button class="c-btn c-op" data-k="-">−</button>
+  <button class="c-btn c-num" data-k="4">4</button><button class="c-btn c-num" data-k="5">5</button><button class="c-btn c-num" data-k="6">6</button><button class="c-btn c-op" data-k="+">+</button>
+  <button class="c-btn c-num" data-k="1">1</button><button class="c-btn c-num" data-k="2">2</button><button class="c-btn c-num" data-k="3">3</button><button class="c-btn c-eq" data-k="=">=</button>
+  <button class="c-btn c-num c-zero" data-k="0">0</button><button class="c-btn c-num" data-k=".">.</button>
+</div></div>`; }
+function paintHTML(){ return `<div class="paint"><div class="paint-bar">
+  <div class="palette"></div>
+  <select class="sz" title="笔刷粗细"><option value="2">细</option><option value="5" selected>中</option><option value="10">粗</option></select>
+  <button class="act" data-act="undo">撤销</button>
+  <button class="act" data-act="clear">清空</button>
+  <button class="act" data-act="save">保存 PNG</button>
+</div><canvas class="cv" width="450" height="260"></canvas></div>`; }
+function tttHTML(){ var cells=''; for(var i=0;i<9;i++) cells+='<button class="cell" data-i="'+i+'"></button>'; return `<div class="ttt"><div class="ttt-status tx">轮到 ✕</div><div class="ttt-board">${cells}</div><button class="ttt-restart">重新开始</button></div>`; }
+function terminalHTML(){ return `<div class="term"><div class="term-out"></div><div class="term-in"><span class="ps1"></span><input type="text" autocomplete="off" spellcheck="false"></div></div>`; }
+function filesHTML(){ return `<div class="fb"><div class="fb-bar"><span class="fb-addr"></span><button class="fb-btn fb-up">上级</button><button class="fb-btn fb-mk">新建文件夹</button><button class="fb-btn fb-mf">新建文件</button></div><div class="fb-list"></div><div class="fb-view"></div></div>`; }
+function pcbHTML(){ return `<div class="pcb"><div class="pcb-toolbar">
+  <span>模式</span><select class="pcb-mode"><option value="realtime">实时</option><option value="step">单步</option></select>
+  <button class="pcb-step">step 步进</button>
+  <input class="pcb-pid" placeholder="PID" style="width:64px">
+  <button class="pcb-block">block</button><button class="pcb-wake">wake</button><button class="pcb-kill">kill</button>
+  <button class="pcb-refresh">刷新</button></div>
+  <table class="pcb-table"><thead><tr><th>PID</th><th>PPID</th><th>USER</th><th>STATE</th><th>PR</th><th>CPU</th><th>MEM</th><th>PC</th><th>R0</th><th>R1</th><th>NAME</th></tr></thead><tbody></tbody></table>
+  <div class="pcb-detail">点击表格行查看 PCB 详情。</div>
+  <div class="pcb-export"><button class="pcb-json">导出 JSON</button><button class="pcb-txt">导出 TXT</button><button class="pcb-html">保存带姓名 HTML</button></div></div>`; }
+function mycompHTML(){ return `<div class="info-win"><h3>📁 我的电脑</h3><p>欢迎，<b class="user-name">张恩义</b>！</p><p>本机：教学模拟机（${'Windows 98'} · 离线演示）</p><p>该窗口仅用于教学展示，拖动标题栏可移动窗口。</p></div>`; }
+function readmeHTML(){ return `<div class="info-win"><h3>教学模拟 · 验收说明</h3><ul class="check">
+  <li>计算器：输入 <b>18</b> × <b>24</b> = 显示 <b>432</b>；÷ 0 = 提示“不能除以零!”。</li>
+  <li>图画：选颜色/粗细，拖动画笔；<b>撤销</b>删除最近一笔并回收内存，<b>清空</b>回收全部；<b>保存 PNG</b>下载图片。</li>
+  <li>井字棋：点击落子，✕/○ 轮流；连成一线判胜并高亮；满盘判平局；<b>重新开始</b>复位。</li>
+  <li>终端：<b>echo 文本 > 文件</b> / <b>cat</b> / <b>cd</b> / <b>ls</b> 等，支持中文名与引号路径；<b>终端与文件浏览器读写同一份虚拟文件</b>。</li>
+  <li>进程：每打开一个应用创建唯一 PID（PPID/USER/STATE/PRIO/CPU/MEM/PC/寄存器）；再次点击已打开应用不重复创建。</li>
+  <li>调度：实时模式单核每 100ms 最多服务 100ms；单步模式用 <b>step</b> 手动轮转，仅运行进程 CPU/PC 增长；<b>block/wake/kill</b> 按规则改状态。</li>
+  <li>改名：修改顶部“用户名”，两系统占位与 whoami 同步更新（虚拟主目录随之重命名）。</li>
+  <li>数据：所有运行态数据仅存内存，<b>刷新页面即丢失</b>；请用 PCB 窗口“导出 JSON/TXT”或“保存带姓名 HTML”留存。</li>
+</ul><p class="hint">说明：终端命令、进程/PCB 均为“教学模型”，不宣称 Windows 98 原生自带 tasklist/pcb，也不能读取真实完整 PCB 或真实硬盘。</p></div>`; }
+
+/* ============ 下载/保存工具 ============ */
+function downloadText(t,fn){ var a=document.createElement('a'); a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(t); a.download=fn; document.body.appendChild(a); a.click(); a.remove(); }
+function downloadHTML(html,fn){ var a=document.createElement('a'); a.href='data:text/html;charset=utf-8,'+encodeURIComponent(html); a.download=fn; document.body.appendChild(a); a.click(); a.remove(); }
+
+/* ============ 应用初始化 ============ */
+function initCalc(w,system,proc){ w.__calc={disp:'0',cur:'',prev:null,op:null,err:false};
+  var disp=w.querySelector('.calc-disp');
+  w.querySelectorAll('.c-btn').forEach(function(b){ b.addEventListener('click',function(){ var ns=calcReduce(w.__calc,b.dataset.k); Object.assign(w.__calc,ns); disp.textContent=w.__calc.disp; if(b.dataset.k!=='C'&&b.dataset.k!=='B'){ proc.act.cmds=(proc.act.cmds||0)+1; proc.act.value=Number(w.__calc.disp)||0; proc.pendingMs+=5; } }); });
+}
+function initPaint(w,system,proc){
+  var cv=w.querySelector('.cv'), ctx=cv.getContext('2d');
+  var strokes=[]; w.__strokes=strokes;
+  function refreshMem(){ proc.mem=2048+strokes.length*8; }
+  function fillWhite(){ ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height); }
+  function drawStroke(s){ ctx.strokeStyle=s.color; ctx.lineWidth=s.w; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.beginPath(); for(var i=0;i<s.pts.length;i++){ if(i===0) ctx.moveTo(s.pts[i].x,s.pts[i].y); else ctx.lineTo(s.pts[i].x,s.pts[i].y); } ctx.stroke(); if(s.pts.length===1){ ctx.fillStyle=s.color; ctx.beginPath(); ctx.arc(s.pts[0].x,s.pts[0].y,s.w/2,0,Math.PI*2); ctx.fill(); } }
+  function redraw(){ fillWhite(); strokes.forEach(drawStroke); }
+  function palette(){ var cols=['#000000','#ff0000','#ff7f00','#ffff00','#00b050','#00b0f0','#7030a0','#ffffff']; var p=w.querySelector('.palette'); cols.forEach(function(c,i){ var b=document.createElement('button'); b.className='sw'+(i===0?' on':''); b.style.background=c; b.dataset.c=c; b.title=c; b.addEventListener('click',function(){ color=c; p.querySelectorAll('.sw').forEach(function(x){x.classList.toggle('on',x===b);}); }); p.appendChild(b); }); }
+  palette(); var color='#000000'; refreshMem(); fillWhite();
+  var sz=w.querySelector('.sz'), drawing=false, last=null, cur=null;
+  function pos(e){ var r=cv.getBoundingClientRect(); return {x:(e.clientX-r.left)*(cv.width/r.width), y:(e.clientY-r.top)*(cv.height/r.height)}; }
+  cv.addEventListener('pointerdown',function(e){ drawing=true; cur={color:color,w:Number(sz.value),pts:[]}; last=pos(e); try{cv.setPointerCapture(e.pointerId);}catch(_){} cur.pts.push(last); drawStroke(cur); });
+  cv.addEventListener('pointermove',function(e){ if(!drawing) return; var p=pos(e); cur.pts.push(p); ctx.strokeStyle=cur.color; ctx.lineWidth=cur.w; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); last=p; });
+  function end(){ if(drawing){ drawing=false; strokes.push(cur); proc.act.strokes=strokes.length; proc.pendingMs+=20; refreshMem(); system.notify(); } }
+  cv.addEventListener('pointerup',end); cv.addEventListener('pointercancel',end);
+  w.querySelector('[data-act="undo"]').addEventListener('click',function(){ if(strokes.length){ strokes.pop(); redraw(); proc.act.strokes=strokes.length; refreshMem(); system.notify(); } });
+  w.querySelector('[data-act="clear"]').addEventListener('click',function(){ strokes.length=0; w.__strokes=strokes; redraw(); proc.act.strokes=0; refreshMem(); system.notify(); });
+  w.querySelector('[data-act="save"]').addEventListener('click',function(){ var name='图画_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.png'; var dl=function(href){ var a=document.createElement('a'); a.href=href; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(href);},3000); }; if(typeof cv.toBlob==='function'){ cv.toBlob(function(blob){ if(!blob){alert('保存失败');return;} dl(URL.createObjectURL(blob)); },'image/png'); } else { dl(cv.toDataURL('image/png')); } });
+}
+function initTTT(w,system,proc){
+  var cells=w.querySelectorAll('.cell'), status=w.querySelector('.ttt-status');
+  var board=Array(9).fill(''), player='X', over=false;
+  function rs(){ if(over) return; status.textContent='轮到 '+(player==='X'?'✕':'○'); status.className='ttt-status t'+(player==='X'?'x':'o'); }
+  function reset(){ board=Array(9).fill(''); player='X'; over=false; cells.forEach(function(c){ c.textContent=''; c.className='cell'; }); rs(); }
+  cells.forEach(function(c,i){ c.addEventListener('click',function(){ if(over||board[i]) return; board[i]=player; c.textContent=player==='X'?'✕':'○'; c.classList.add(player==='X'?'px':'po'); var line=getWin(board); if(line){ over=true; line.forEach(function(j){cells[j].classList.add('win-cell');}); status.textContent=(player==='X'?'✕':'○')+' 获胜!'; status.className='ttt-status t'+(player==='X'?'x':'o'); return; } if(board.every(Boolean)){ over=true; status.textContent='平局'; status.className='ttt-status tdraw'; return; } player=player==='X'?'O':'X'; rs(); proc.act.moves=(proc.act.moves||0)+1; proc.pendingMs+=5; }); });
+  w.querySelector('.ttt-restart').addEventListener('click',reset); rs();
+}
+function initTerminal(w,system,proc){
+  var out=w.querySelector('.term-out'), inp=w.querySelector('.term-in input'), ps1=w.querySelector('.ps1');
+  function prompt(){ return (proc.user||system.user)+'@'+(system.kind==='win'?'WIN':'MAC')+':'+displayCwd(system)+'$'; }
+  function print(t,cls){ var d=document.createElement('div'); if(cls) d.className=cls; d.textContent=t; out.appendChild(d); out.scrollTop=out.scrollHeight; }
+  ps1.textContent=prompt(); print('教学模拟终端（'+(system.kind==='win'?'Windows 98':'macOS')+'）输入 help 查看命令。','sys');
+  inp.addEventListener('keydown',function(e){ if(e.key!=='Enter') return; var line=inp.value; inp.value=''; var r=execCommand(system,line,proc); if(r.clear){ out.innerHTML=''; print(prompt(),'sys'); return; } r.lines.forEach(function(l){ print(l.t,l.cls); }); if(r.exit){ print('',''); if(w.__close) w.__close(); return; } ps1.textContent=prompt(); });
+}
+function initFiles(w,system,proc){
+  var addr=w.querySelector('.fb-addr'), list=w.querySelector('.fb-list'), view=w.querySelector('.fb-view');
+  function render(){ addr.textContent=displayCwd(system); list.innerHTML=''; var node=getNode(system.fs,system.cwd); if(!node||node.type!=='dir') return; Object.keys(node.children).sort().forEach(function(nm){ var c=node.children[nm]; var it=document.createElement('div'); it.className='fb-item'+(c.type==='dir'?' dir':''); it.innerHTML='<div class="fi">'+(c.type==='dir'?'📁':'📄')+'</div><div>'+nm+'</div>'; it.addEventListener('dblclick',function(){ if(c.type==='dir'){ system.cwd=normalize(system.cwd+'/'+nm); proc.act.nav=(proc.act.nav||0)+1; render(); } else { var r=readFileNode(system,normalize(system.cwd+'/'+nm)); view.textContent=r.err?'':(r.content||'(空文件)'); if(proc){ proc.fileBuf+=Math.max(1,Math.round((r.content||'').length/1024)); } system.notify(); } }); list.appendChild(it); }); }
+  w.querySelector('.fb-up').addEventListener('click',function(){ system.cwd=dirname(system.cwd); render(); });
+  w.querySelector('.fb-mk').addEventListener('click',function(){ var nm=window.prompt('新建文件夹名'); if(nm){ var p=resolve(system,nm); var dp=dirname(p); var par=getNode(system.fs,dp); var bn=basename(p); if(par&&par.type==='dir'&&!par.children[bn]){ par.children[bn]=dir(bn); render(); } } });
+  w.querySelector('.fb-mf').addEventListener('click',function(){ var nm=window.prompt('新建文件名'); if(nm){ var p=resolve(system,nm); writeFileNode(system,p,''); render(); } });
+  render();
+}
+function initPCB(w,system,proc){
+  var tbody=w.querySelector('.pcb-table tbody'), detail=w.querySelector('.pcb-detail');
+  var modeSel=w.querySelector('.pcb-mode'), pidIn=w.querySelector('.pcb-pid'), selpid=null;
+  modeSel.value=system.mode;
+  function render(){ tbody.innerHTML=''; var all=system.processes.concat(system.archived.slice(-6)); all.forEach(function(p){ var tr=document.createElement('tr'); tr.className=p.state; tr.innerHTML='<td>'+p.pid+'</td><td>'+p.ppid+'</td><td>'+p.user+'</td><td>'+p.state+'</td><td>'+p.prio+'</td><td>'+p.cpuMs+'</td><td>'+p.mem+'</td><td>'+p.pc+'</td><td>'+p.r0+'</td><td>'+p.r1+'</td><td>'+p.name+'</td>'; tr.addEventListener('click',function(){ selpid=p.pid; detail.textContent=pcbDetail(system,p); }); tbody.appendChild(tr); }); if(selpid==null&&system.processes[0]) detail.textContent=pcbDetail(system,system.processes[0]); }
+  modeSel.addEventListener('change',function(){ system.setMode(modeSel.value); });
+  w.querySelector('.pcb-step').addEventListener('click',function(){ var r=system.step(); if(r.err){detail.textContent='step: '+r.err;} else if(r.info){detail.textContent=r.info;} else {detail.textContent='step -> PID '+r.pid+' '+r.name; render();} });
+  w.querySelector('.pcb-block').addEventListener('click',function(){ var pid=pidIn.value; detail.textContent=system.block(pid)?('block PID '+pid+' 成功'):('block 失败（非 Running 或不存在）'); render(); });
+  w.querySelector('.pcb-wake').addEventListener('click',function(){ var pid=pidIn.value; detail.textContent=system.wake(pid)?('wake PID '+pid+' 成功'):('wake 失败（非 Blocked 或不存在）'); render(); });
+  w.querySelector('.pcb-kill').addEventListener('click',function(){ var pid=pidIn.value; detail.textContent=system.kill(pid)?('kill PID '+pid+' 成功'):('kill 失败（不存在）'); render(); });
+  w.querySelector('.pcb-refresh').addEventListener('click',render);
+  w.querySelector('.pcb-json').addEventListener('click',function(){ var data={name:system.user,system:system.kind,exportedAt:new Date().toISOString(),log:system.log,processes:system.processes,archived:system.archived}; downloadText(JSON.stringify(data,null,2),system.user+'_'+system.kind+'_实验记录.json'); });
+  w.querySelector('.pcb-txt').addEventListener('click',function(){ var L=['教学模拟实验记录','姓名: '+system.user,'系统: '+system.kind,'导出时间: '+new Date().toLocaleString('zh-CN'),'==== 命令与输出 / 状态事件 ====']; system.log.forEach(function(e){ L.push('['+new Date(e.t).toLocaleTimeString('zh-CN')+'] '+e.kind+': '+e.text); }); L.push('==== 当前进程快照 ===='); system.processes.forEach(function(p){ L.push(fmtProc(p)); }); L.push('==== 终止归档 ===='); system.archived.forEach(function(p){ L.push(fmtProc(p)); }); downloadText(L.join('\n'),system.user+'_'+system.kind+'_实验记录.txt'); });
+  w.querySelector('.pcb-html').addEventListener('click',function(){ downloadHTML(document.documentElement.outerHTML, system.user+'_'+system.kind+'_模拟.html'); });
+  system.addListener(render);
+  render();
+}
+function initMycomp(w,system,proc){ /* 仅展示，无额外逻辑 */ }
+
+/* ============ 应用注册表 ============ */
+var APPS={
+  mycomp:{title:'我的电脑',icon:'🖥️',w:300,h:170,init:initMycomp,content:mycompHTML},
+  calc:{title:'计算器',icon:'🧮',w:236,h:300,init:initCalc,content:calcHTML},
+  paint:{title:'图画',icon:'🎨',w:480,h:400,init:initPaint,content:paintHTML},
+  ttt:{title:'井字棋',icon:'🎯',w:330,h:410,init:initTTT,content:tttHTML},
+  terminal:{title:'终端',icon:'💻',w:520,h:360,init:initTerminal,content:terminalHTML},
+  files:{title:'文件浏览器',icon:'📁',w:460,h:400,init:initFiles,content:filesHTML},
+  pcb:{title:'进程 / PCB',icon:'🧩',w:560,h:430,init:initPCB,content:pcbHTML},
+  readme:{title:'说明',icon:'📄',w:470,h:360,init:null,content:readmeHTML}
+};
+
+/* ============ 窗口管理器（每套系统独立 + 进程联动） ============ */
+function makeWM(cfg){
+  var state={open:{}, z:20, count:0};
+  var closeSel=cfg.closeSel||'.win-close';
+  function focusWin(w){ state.z++; w.style.zIndex=state.z; if(cfg.onFocus) cfg.onFocus(w); }
+  function closeApp(key){
+    var w=state.open[key]; if(!w) return;
+    var proc=w.__proc;
+    if(proc && cfg.system.processes.indexOf(proc)>=0) cfg.system.finish(proc.pid);
+    if(w.parentNode) w.parentNode.removeChild(w);
+    delete state.open[key];
+    if(cfg.onClose) cfg.onClose(key);
+  }
+  function openApp(key){
+    var def=APPS[key]; if(!def) return null;
+    if(state.open[key]){ focusWin(state.open[key]); return state.open[key]; }
+    var w=document.createElement('div'); w.className='win '+cfg.cls; w.style.width=def.w+'px';
+    state.count++;
+    var maxX=Math.max(0,cfg.desk.clientWidth-def.w-10);
+    var maxY=Math.max(0,cfg.desk.clientHeight-def.h-10);
+    w.style.left=Math.min(24+((state.count-1)%5)*26,maxX)+'px';
+    w.style.top=Math.min(26+((state.count-1)%5)*24,maxY)+'px';
+    w.innerHTML=cfg.titleHTML(def)+'<div class="win-body">'+def.content()+'</div>';
+    cfg.desk.appendChild(w);
+    var t=w.querySelector('.win-title');
+    var c=w.querySelector(closeSel);
+    if(c) c.addEventListener('pointerdown',function(ev){ ev.stopPropagation(); closeApp(key); });
+    t.addEventListener('pointerdown',function(ev){ if(ev.target.closest('.lt')||ev.target.closest(closeSel)) return; beginDrag(ev); });
+    w.addEventListener('pointerdown',function(){ focusWin(w); });
+    var proc=cfg.system.spawn(def.title,1,key);
+    w.__proc=proc; w.__close=function(){ closeApp(key); };
+    if(def.init) def.init(w,cfg.system,proc);
+    state.open[key]=w;
+    if(cfg.onOpen) cfg.onOpen(key,w);
+    focusWin(w);
+    return w;
+  }
+  function beginDrag(ev){
+    var w=ev.currentTarget.closest('.win'); focusWin(w);
+    var ox=ev.clientX-w.offsetLeft, oy=ev.clientY-w.offsetTop;
+    var minTop=cfg.minTop||0;
+    var maxTop=(cfg.maxTopFn?cfg.maxTopFn(cfg.desk.clientHeight):cfg.desk.clientHeight-w.offsetHeight);
+    var maxLeft=cfg.desk.clientWidth-w.offsetWidth;
+    function move(me){ var x=me.clientX-ox, y=me.clientY-oy; x=Math.max(0,Math.min(maxLeft,x)); y=Math.max(minTop,Math.min(Math.max(minTop,maxTop),y)); w.style.left=x+'px'; w.style.top=y+'px'; }
+    function up(){ window.removeEventListener('pointermove',move); window.removeEventListener('pointerup',up); }
+    window.addEventListener('pointermove',move); window.addEventListener('pointerup',up);
+  }
+  return {openApp:openApp, closeApp:closeApp, focusWin:focusWin, _state:state};
+}
+
+/* ============ 机器构建 ============ */
+function winTitle(def){ return '<div class="win-title active"><span class="win-ico">'+def.icon+'</span><span class="win-name">'+def.title+'</span><button class="win-close" title="关闭">✕</button></div>'; }
+function macTitle(def){ return '<div class="win-title"><span class="mac-lights"><i class="lt r" title="关闭"></i><i class="lt y"></i><i class="lt g"></i></span><span class="win-name">'+def.title+'</span></div>'; }
+function renderStat(el,sys){ var bar=el.querySelector('.sysstat'); if(!bar) return; bar.innerHTML='<span>模式 <b>'+sys.mode+'</b></span> <span>CPU(1s) <b>'+sys.cpuPercent()+'%</b></span> <span>累计CPU <b>'+sys.totalCpuMs+'ms</b></span> <span>缓冲内存 <b>'+sys.bufferedMem+'KB</b></span> <span>进程 <b>'+sys.processes.length+'</b></span> <span class="modebtn" style="cursor:pointer;text-decoration:underline">切换模式</span>'; }
+
+function buildMachine(kind){
+  var sys=new System(kind, userName());
+  var el=document.createElement('section'); el.className='machine';
+  el.innerHTML = (kind==='win')
+    ? '<div class="machine-hdr w98-hdr"><span>Windows 98</span><span class="home" title="返回主页">⌂ 主页</span><span class="badge">教学模拟</span></div>'
+      + '<div class="desktop desk-win" id="desk98_'+kind+'">'
+      +   '<div class="sysstat"></div>'
+      +   '<div class="desk-hint h98">双击桌面图标打开应用 · 终端/文件浏览器共享同一份虚拟文件系统</div>'
+      +   '<div id="startMenu"><div class="sm-hdr"><span class="user-name" id="smUser" title="点击修改用户名">'+sys.user+'</span><span class="sm-title">教学模拟 · Windows 98</span></div></div>'
+      +   '<div id="taskbar98"><button id="startBtn"><svg viewBox="0 0 48 48" width="17" height="17" aria-label="Windows"><rect x="3" y="3" width="19" height="19" rx="2" fill="#e81123"/><rect x="26" y="3" width="19" height="19" rx="2" fill="#0078d4"/><rect x="3" y="26" width="19" height="19" rx="2" fill="#09bb07"/><rect x="26" y="26" width="19" height="19" rx="2" fill="#f79f1a"/></svg>开始</button><div id="taskbarBtns"></div><div id="clockWin">--:--</div></div>'
+      + '</div>'
+    : '<div class="machine-hdr mac-hdr"><span>macOS</span><span class="home" title="返回主页">⌂ 主页</span><span class="badge">教学模拟</span></div>'
+      + '<div class="desktop desk-mac" id="deskMac_'+kind+'">'
+      +   '<div class="sysstat"></div>'
+      +   '<div id="menubar"><div class="mb-left"><span class="mb-apple">🍎</span><span class="mb-app">Finder</span><span class="mb-menu">文件</span><span class="mb-menu">编辑</span><span class="mb-menu">显示</span><span class="mb-menu">前往</span><span class="mb-menu">窗口</span><span class="mb-menu">帮助</span></div><div class="mb-right"><span>🔋</span><span>🔈</span><span id="clockMac">--:--</span><span id="userMac" class="user-name">'+sys.user+'</span></div></div>'
+      +   '<div class="desk-hint hm">底部 Dock 单击打开应用</div>'
+      +   '<div id="dock"></div>'
+      + '</div>';
+  var desk=el.querySelector('.desktop');
+  if(kind==='mac'){ var sb=el.querySelector('.sysstat'); sb.style.position='absolute'; sb.style.top='26px'; sb.style.left='0'; sb.style.right='0'; }
+
+  var cfg={ desk:desk, cls:(kind==='win'?'sys98':'sysmac'), system:sys, closeSel:(kind==='mac'?'.lt.r':'.win-close'), minTop:(kind==='mac'?26:0),
+    maxTopFn:function(h){ return kind==='mac'?h-96:h-38; },
+    titleHTML:(kind==='win'?winTitle:macTitle),
+    onFocus:function(w){ if(kind==='win') el.querySelectorAll('.win-title').forEach(function(x){ x.classList.toggle('active', x.closest('.win')===w); }); },
+    onOpen:function(){ if(kind==='win') taskbarRebuild(); },
+    onClose:function(){ if(kind==='win') taskbarRebuild(); }
+  };
+  var wm=makeWM(cfg);
+  sys._closeWinByPid=function(pid){ for(var k in wm._state.open){ var w=wm._state.open[k]; if(w.__proc&&w.__proc.pid===pid) wm.closeApp(k); } };
+  function taskbarRebuild(){ var tb=el.querySelector('#taskbarBtns'); tb.innerHTML=''; Object.keys(wm._state.open).forEach(function(key){ var def=APPS[key]; var b=document.createElement('button'); b.className='tb-btn'; b.innerHTML=def.icon+' '+def.title; b.addEventListener('click',function(){ wm.focusWin(wm._state.open[key]); }); tb.appendChild(b); }); }
+
+  // 图标 / Dock / 开始菜单
+  var winIcons=['mycomp','calc','paint','ttt','terminal','files','pcb','readme'];
+  var macDock =['calc','paint','ttt','terminal','files','pcb','|','readme'];
+  var winStart=['calc','paint','ttt','terminal','files','pcb','readme'];
+  if(kind==='win'){
+    winIcons.forEach(function(key,i){ var def=APPS[key]; var ic=document.createElement('div'); ic.className='ic98'; ic.style.left='16px'; ic.style.top=(44+i*82)+'px'; ic.innerHTML='<div class="ico">'+def.icon+'</div><div class="ilbl">'+def.title+'</div>'; ic.addEventListener('dblclick',function(){ wm.openApp(key); }); ic.addEventListener('click',function(){ el.querySelectorAll('.ic98').forEach(function(x){ x.classList.toggle('selected',x===ic); }); }); desk.appendChild(ic); });
+    var sm=el.querySelector('#startMenu'); winStart.forEach(function(key){ var def=APPS[key]; var it=document.createElement('div'); it.className='sm-item'; it.innerHTML=def.icon+' '+def.title; it.addEventListener('click',function(){ wm.openApp(key); sm.classList.remove('show'); }); sm.appendChild(it); });
+    var sep=document.createElement('div'); sep.className='sm-sep'; sm.appendChild(sep);
+    var ft=document.createElement('div'); ft.className='sm-foot'; ft.textContent='Windows 98 教学模拟'; sm.appendChild(ft);
+    var sb2=el.querySelector('#startBtn'), sm2=el.querySelector('#startMenu');
+    sb2.addEventListener('click',function(e){ e.stopPropagation(); sm2.classList.toggle('show'); });
+    document.addEventListener('pointerdown',function(e){ if(!sm2.contains(e.target)&&!sb2.contains(e.target)) sm2.classList.remove('show'); });
+  } else {
+    macDock.forEach(function(key){ if(key==='|'){ var s=document.createElement('div'); s.className='dock-sep'; el.querySelector('#dock').appendChild(s); return; } var def=APPS[key]; var d=document.createElement('div'); d.className='dock-item'; d.dataset.key=key; d.innerHTML='<div class="dock-ico">'+def.icon+'</div><div class="dock-lbl">'+def.title+'</div>'; d.addEventListener('click',function(){ wm.openApp(key); }); el.querySelector('#dock').appendChild(d); });
+  }
+  var smUser=el.querySelector('#smUser'); if(smUser) smUser.addEventListener('click',function(){ var i=document.getElementById('userNameInput'); i.focus(); i.select(); });
+  var userMac=el.querySelector('#userMac'); if(userMac) userMac.addEventListener('click',function(){ var i=document.getElementById('userNameInput'); i.focus(); i.select(); });
+
+  sys.addListener(function(s){ renderStat(el,s); });
+  renderStat(el,sys);
+  el.querySelector('.sysstat').addEventListener('click',function(e){ if(e.target.classList.contains('modebtn')){ sys.setMode(sys.mode==='realtime'?'step':'realtime'); } });
+  sys.setMode('realtime');
+  return {sys:sys, wm:wm, el:el};
+}
+
+/* ============ 启动 / 命名 / 主页 ============ */
+var systems=null;
+function userName(){ var i=document.getElementById('userNameInput'); return i?i.value.trim()||'张恩义':'张恩义'; }
+function renameUser(s,newName){ var oldHome='/home/'+s.user; var home=s.fs.children['home']; if(home&&home.children[s.user]){ home.children[newName]=home.children[s.user]; delete home.children[s.user]; } s.user=newName; if(s.cwd.indexOf(oldHome)===0) s.cwd='/home/'+newName+s.cwd.slice(oldHome.length); s.processes.forEach(function(p){ p.user=newName; }); s.notify(); }
+function applyName(n){
+  var i=document.getElementById('userNameInput'); if(i) i.value=n;
+  document.querySelectorAll('.user-name').forEach(function(el){ el.textContent=n; });
+  if(systems){ ['win','mac'].forEach(function(k){ var s=systems[k].sys; if(s.user!==n) renameUser(s,n); }); }
+}
+function boot(){
+  var nameInput=document.getElementById('userNameInput');
+  nameInput.addEventListener('input',function(){ applyName(nameInput.value.trim()||'张恩义'); });
+  function buildSafe(kind){ try{ return buildMachine(kind); }catch(e){ console.error('build '+kind+' failed', e); return null; } }
+  systems={ win:buildSafe('win'), mac:buildSafe('mac') };
+  if(systems.win) document.getElementById('stage').appendChild(systems.win.el);
+  if(systems.mac) document.getElementById('stage').appendChild(systems.mac.el);
+  applyName(userName());
+
+  document.querySelectorAll('#mainpage .mp-card').forEach(function(card){ card.addEventListener('click',function(){ selectSystem(card.dataset.sys); }); });
+  document.querySelectorAll('.machine .home').forEach(function(h){ h.addEventListener('click',function(){ showMain(); }); });
+  document.getElementById('stBtn').addEventListener('click',function(){ var box=document.getElementById('stBox'); var res=runSelfTest(); box.innerHTML='<div class="st-h">自检结果</div>'+res.map(function(r){return '<div class="st-item '+(r.pass?'ok':'bad')+'">'+(r.pass?'✔':'✘')+' '+r.n+'</div>';}).join(''); box.classList.add('show'); });
+  document.getElementById('stBox').addEventListener('click',function(){ this.classList.remove('show'); });
+
+  function tick(){ var d=new Date(); var s=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); var c1=document.getElementById('clockWin'),c2=document.getElementById('clockMac'); if(c1)c1.textContent=s; if(c2)c2.textContent=s; }
+  tick(); setInterval(tick,1000);
+}
+function selectSystem(kind){ if(!systems||!systems[kind]) return; document.getElementById('mainpage').style.display='none'; systems[kind].el.classList.add('show'); }
+function showMain(){ document.getElementById('mainpage').style.display='flex'; document.querySelectorAll('.machine').forEach(function(m){ m.classList.remove('show'); }); }
+
+/* ============ 自检（供浏览器 / Node 调用） ============ */
+function runSelfTest(){
+  var res=[];
+  var s=initCalcState(); ['1','8','*','2','4','='].forEach(function(k){ s=calcReduce(s,k); }); res.push({n:'计算器 18×24=432',pass:s.disp==='432'});
+  s=initCalcState(); ['5','/','0','='].forEach(function(k){ s=calcReduce(s,k); }); res.push({n:'计算器 除零提示',pass:s.err&&/不能/.test(s.disp)});
+  var bd=['X','X','X','','O','','','O','']; var w=getWin(bd); res.push({n:'井字棋 横向判胜',pass:!!w&&w.join(',')==='0,1,2'});
+  var bd2=['X','O','X','O','O','X','X','X','O']; res.push({n:'井字棋 平局识别',pass:getWin(bd2)===null&&bd2.every(Boolean)});
+  try{
+    var t=new System('win','测试'); t.setMode('step');
+    execCommand(t,'echo "你好 世界" > a.txt',null);
+    var f=readFileNode(t, t.cwd+'/a.txt'); res.push({n:'终端 echo>/cat 与中文路径',pass:f.content==='你好 世界'});
+    execCommand(t,'mkdir 文档',null); execCommand(t,'cd 文档',null); res.push({n:'终端 cd/ls 目录切换',pass:t.cwd.indexOf('/文档')>0});
+    var p1=t.spawn('a',1,'calc'); var st=t.step(); var stepOk=!!st.pid;
+    var pid=p1.pid; t.block(pid); var b=t.findProc(pid).state==='Blocked'; t.wake(pid); var w2=t.findProc(pid).state==='Ready';
+    var p2=t.spawn('b',1,'ttt'); t.kill(p2.pid); var k2=(!t.findProc(p2.pid)||t.findProc(p2.pid).state==='Finished');
+    res.push({n:'block/wake/kill 状态机',pass:b&&w2&&k2});
+    res.push({n:'单步调度 step',pass:stepOk});
+  }catch(e){ res.push({n:'终端/进程测试',pass:false}); }
+  if(typeof document!=='undefined'){
+    var cv=document.createElement('canvas'); res.push({n:'图画 PNG 保存接口',pass:typeof cv.toBlob==='function'||typeof cv.toDataURL==='function'});
+    var el=document.querySelector('.user-name'); res.push({n:'用户名同步',pass:!!el&&el.textContent===(document.getElementById('userNameInput').value||'张恩义')});
+  }
+  return res;
+}
+
+if(typeof document!=='undefined' && document.getElementById('stage')) boot();
+if(typeof window!=='undefined'){ window.__selfTest=runSelfTest; }
+})();
+</script>
+</body>
+</html>
